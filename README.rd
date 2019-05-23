@@ -3010,9 +3010,169 @@ NAME     CPU(cores)   CPU%   MEMORY(bytes)   MEMORY%
 node02   59m          2%     448Mi           25%
 
 
+Metrics-server
+1.Setup metrics api
+# kubectl api-versions
+# kubectl resources
+# mkdir -p /opt/k8s/manifests/metrics/metrics-server/
+# cd /opt/k8s/manifests/metrics/metrics-server/
+# for file in aggregated-metrics-reader.yaml auth-delegator.yaml auth-reader.yaml metrics-apiservice.yaml metrics-server-deployment.yaml metrics-server-service.yaml resource-reader.yaml; do wget https://raw.githubusercontent.com/kubernetes-incubator/metrics-server/master/deploy/1.8%2B/$file; done
+# grep -r "image" .
+# sed -i 's#k8s.gcr.io#registry.cn-hangzhou.aliyuncs.com/showerlee#g' metrics-server-deployment.yaml
 
+add rule resource
+# vi resource-reader.yaml 
+---------------------------
+kind: ClusterRole
+metadata:
+  name: system:metrics-server
+rules:
+- apiGroups:
+  - ""
+  resources:
+  - pods
+  - nodes
+  - namespaces # add this line
+  - nodes/stats
+  verbs:
+  - get
+  - list
+  - watch
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: system:metrics-server
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: system:metrics-server
+subjects:
+- kind: ServiceAccount
+  name: metrics-server
+  namespace: kube-system
+-------------------------------
 
+add "hostNetwork: true" and command for metrics-server-deployment.yaml
+# vi metrics-server-deployment.yaml
+-------------------------------
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: metrics-server
+  namespace: kube-system
+---
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: metrics-server
+  namespace: kube-system
+  labels:
+    k8s-app: metrics-server
+spec:
+  selector:
+    matchLabels:
+      k8s-app: metrics-server
+  template:
+    metadata:
+      name: metrics-server
+      labels:
+        k8s-app: metrics-server
+    spec:
+      serviceAccountName: metrics-server
+      volumes:
+      # mount in tmp so we can safely use from-scratch images and/or read-only containers
+      - name: tmp-dir
+        emptyDir: {}
+      hostNetwork: true # highly required
+      containers:
+      - name: metrics-server
+        image: registry.cn-hangzhou.aliyuncs.com/showerlee/metrics-server-amd64:v0.3.3
+        imagePullPolicy: IfNotPresent
+        command: # highly required
+        - /metrics-server 
+        - --kubelet-insecure-tls
+        - --kubelet-preferred-address-types=InternalIP
+        volumeMounts:
+        - name: tmp-dir
+          mountPath: /tmp
+-----------------------------------
+# kubectl apply -f ./
+# kubectl api-versions |grep metrics
+metrics.k8s.io/v1beta1
+# kubectl get apiservice v1beta1.metrics.k8s.io -o yaml
 
+2.test metrics api
+open k8s proxy
+# kubectl proxy --port=8091 &
+# curl http://localhost:8091/apis/metrics.k8s.io/v1beta1
+-------------------------------
+{
+  "kind": "APIResourceList",
+  "apiVersion": "v1",
+  "groupVersion": "metrics.k8s.io/v1beta1",
+  "resources": [
+    {
+      "name": "nodes",
+      "singularName": "",
+      "namespaced": false,
+      "kind": "NodeMetrics",
+      "verbs": [
+        "get",
+        "list"
+      ]
+    },
+    {
+      "name": "pods",
+      "singularName": "",
+      "namespaced": true,
+      "kind": "PodMetrics",
+      "verbs": [
+        "get",
+        "list"
+      ]
+    }
+  ]
+}
+------------------------------------
+
+get raw api
+# kubectl get --raw "/apis/metrics.k8s.io/v1beta1/" 
+-----------------------------
+{"kind":"APIResourceList","apiVersion":"v1","groupVersion":"metrics.k8s.io/v1beta1","resources":[{"name":"nodes","singularName":"","namespaced":false,"kind":"NodeMetrics","verbs":["get","list"]},{"name":"pods","singularName":"","namespaced":true,"kind":"PodMetrics","verbs":["get","list"]}]}
+-------------------------------------
+
+3.check pod and node resources
+# kubectl top pods
+NAME                               CPU(cores)   MEMORY(bytes)
+wordpress-557bfb4d8b-9gzvv         1m           27Mi
+wordpress-mysql-7977b9588d-g9f7p   1m           449Mi
+# kubectl top pods -n kube-system
+NAME                                  CPU(cores)   MEMORY(bytes)
+canal-89r9s                           18m          48Mi
+canal-bq9xn                           17m          61Mi
+canal-znbgx                           16m          49Mi
+coredns-576cbf47c7-h4p9n              2m           12Mi
+coredns-576cbf47c7-rmcsr              2m           12Mi
+etcd-master                           16m          125Mi
+kube-apiserver-master                 36m          465Mi
+kube-controller-manager-master        40m          64Mi
+kube-flannel-ds-amd64-9jwnz           2m           15Mi
+kube-flannel-ds-amd64-bzb7g           2m           25Mi
+kube-flannel-ds-amd64-vmckr           2m           16Mi
+kube-proxy-cw5vd                      2m           22Mi
+kube-proxy-fbjz7                      2m           14Mi
+kube-proxy-wljvz                      2m           14Mi
+kube-scheduler-master                 10m          13Mi
+kubernetes-dashboard-85db5fb4-7vphw   1m           11Mi
+metrics-server-6f4fd98f79-8fl2t       1m           13Mi
+
+# kubectl top nodes
+NAME     CPU(cores)   CPU%   MEMORY(bytes)   MEMORY%
+master   177m         8%     1083Mi          39%
+node01   63m          3%     1014Mi          58%
+node02   70m          3%     366Mi           21%
 
 
 
