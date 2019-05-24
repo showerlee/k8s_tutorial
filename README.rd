@@ -32,17 +32,7 @@ enabled=1
 # yum install docker-ce-17.03.2.ce-1.el7.centos
 # yum install kubelet-1.12.0 kubeadm-1.12.0 kubectl-1.12.0 -y
 
-3. add proxy(not workable)
-# vi /usr/lib/systemd/system/docker.service
-============================
-[Service]
-Environment="HTTPS_PROXY=http://www.ik8s.io:10080"
-Environment="NO_PROXY=127.0.0.1/8, 172.16.0.0/16"
-========================================
-# systemctl daemon-reload
-# systemctl start docker
-
-alternative workaround:
+3. download docker image from ali docker mirrors 
 # sh pullimages.sh
 ===============================
 #!/bin/bash
@@ -50,9 +40,9 @@ images=(kube-apiserver:v1.12.0 kube-controller-manager:v1.12.0 kube-scheduler:v1
 
 for img in ${images[@]}
 do
-   docker pull   registry.cn-shenzhen.aliyuncs.com/showerlee/$img
-   docker tag    registry.cn-shenzhen.aliyuncs.com/showerlee/$img   k8s.gcr.io/$img
-   docker rmi  -f  registry.cn-shenzhen.aliyuncs.com/showerlee/$img
+   docker pull   registry.cn-hangzhou.aliyuncs.com/showerlee/$img
+   docker tag    registry.cn-hangzhou.aliyuncs.com/showerlee/$img   k8s.gcr.io/$img
+   docker rmi  -f  registry.cn-hangzhou.aliyuncs.com/showerlee/$img
 done
 ========================================
 # remove all images if the version is incorrect
@@ -129,8 +119,8 @@ master   NotReady   master   24m   v1.12.0
 13.install flannel to make node ready
 # wget https://raw.githubusercontent.com/coreos/flannel/master/Documentation/kube-flannel.yml
 
-replace quay.io/coreos/ to quay-mirror.qiniu.com/coreos/
-# sed -i "s#quay.io/coreos/#quay-mirror.qiniu.com/coreos/#g" kube-flannel.yml
+13.1 replace quay.io/coreos/ to quay-mirror.qiniu.com/coreos/
+# sed -i "s#quay.io/coreos/#registry.cn-hangzhou.aliyuncs.com/showerlee/#g" kube-flannel.yml
 tips: replace gcr.io/google_containers/ to registry.aliyuncs.com/google_containers/ if needed
 # kubectl apply -f kube-flannel.yml
 # docker image ls
