@@ -3165,6 +3165,217 @@ node01   63m          3%     1014Mi          58%
 node02   70m          3%     366Mi           21%
 
 
+Custom Metrics API
+Prometheus
+1.download promethenus k8s yaml file
+# cd /opt/k8s/manifests/metrics/
+# git clone https://github.com/iKubernetes/k8s-prom.git
+# cd k8s-prom/
+# sed -i 's#gcr.io#gcr.azk8s.cn#g' ./kube-state-metrics/kube-state-metrics-deploy.yaml
+
+2.setup namespace
+# kubectl apply -f namespace.yaml
+
+3.setup node-exporter
+# cd node_exporter/
+# kubectl apply -f ./
+# kubectl get pods -n prom
+
+4. setup prometheus
+# cd ../prometheus/
+# sed -i 's#memory: 2Gi#memory: 1Gi#g' prometheus-deploy.yaml
+# kubectl apply -f ./
+# kubectl get all -n prom
+# kubectl logs -n prom prometheus-server-69c85b79b-h88sl
+visit prometheus web site via chrome
+http://10.0.2.20:30090
+
+5.setup metrics server
+# cd ../kube-state-metrics/
+# kubectl apply -f .
+# kubectl get all -n prom
+
+6.create prometheus adapter cert
+# cd /etc/kubernetes/pki/
+create private key
+# (umask 077; openssl genrsa -out serving.key 2048)
+create cert sign request
+# openssl req -new -key serving.key -out serving.csr -subj "/CN=serving"
+create certificate
+# openssl x509 -req -in serving.csr -CA ./ca.crt -CAkey ./ca.key -CAcreateserial -out serving.crt -days 3650
+create k8s secret
+# kubectl create secret generic cm-adapter-serving-certs --from-file=serving.crt=./serving.crt --from-file=serving.key=./serving.key -n prom
+
+7.setup prometheus adapter
+# cd ../k8s-prometheus-adapter/
+# mv custom-metrics-apiserver-deployment.yaml{,.bak}
+# wget https://raw.githubusercontent.com/DirectXMan12/k8s-prometheus-adapter/master/deploy/manifests/custom-metrics-apiserver-deployment.yaml
+# sed -i 's#namespace: custom-metrics#namespace: prom#g' custom-metrics-apiserver-deployment.yaml
+# wget https://raw.githubusercontent.com/DirectXMan12/k8s-prometheus-adapter/master/deploy/manifests/custom-metrics-config-map.yaml
+# sed -i 's#namespace: custom-metrics#namespace: prom#g' custom-metrics-config-map.yaml
+# kubectl apply -f ./
+# kubectl get all -n prom
+
+8.check k8s api applied custom metrics api
+# kubectl api-versions | grep custom
+custom.metrics.k8s.io/v1beta1
+# curl http://localhost:8091/apis/custom.metrics.k8s.io/v1beta1/ 
+-------------------------------------------
+{
+  "kind": "APIResourceList",
+  "apiVersion": "v1",
+  "groupVersion": "custom.metrics.k8s.io/v1beta1",
+  "resources": [
+    {
+      "name": "pods/go_goroutines",
+      "singularName": "",
+      "namespaced": true,
+      "kind": "MetricValueList",
+      "verbs": [
+        "get"
+      ]
+    },
+    {
+      "name": "namespaces/kube_daemonset_status_number_available",
+      "singularName": "",
+      "namespaced": false,
+      "kind": "MetricValueList",
+      "verbs": [
+        "get"
+      ]
+    },
+...
+-------------------------------------------------
+
+9.setup grafana integrated with prometheus
+# /opt/k8s/manifests/metrics/k8s-prom/
+# cp -a /opt/k8s/manifests/metrics/heapster/grafana.yaml .
+# sed -i 's#namespace: kube-system#namespace: prom#g' grafana.yaml
+# sed -i 's/- name: INFLUXDB_HOST/# - name: INFLUXDB_HOST/g' grafana.yaml
+# sed -i 's/value: monitoring-influxdb/# value: monitoring-influxdb/g' grafana.yaml
+# kubectl apply -f grafana.yaml
+# kubectl get svc -n prom
+
+10.visit grafana web page http://10.0.2.20:30152/datasources/edit/1
+Data Sources / prometheus
+Name: prometheus
+Type: Prometheus
+
+HTTP
+URL http://prometheus.prom.svc:9090
+
+Save & Test
+
+11.download grafana dashboard json file
+# wget https://grafana.com/api/dashboards/6417/revisions/1/download -O kubernetes-cluster-prometheus_rev1.json
+
+12.import the file in grafana backend
+visit http://127.0.0.1:30152/dashboard/import
+import kubernetes-cluster-prometheus_rev1.json into the web page
+
+the fancy dashboard is setup properly
+http://127.0.0.1:30152/d/4XuMd2Iiz/kubernetes-cluster-prometheus?orgId=1
+
+need to sync datetime via if k8s cluster is nap
+# /usr/sbin/ntpdate pool.ntp.org
+
+HPA(HorizontalPodAutoscaler)
+# kubectl explain hpa
+# kubectl api-versions | grep autoscaling
+autoscaling/v1
+autoscaling/v2beta1
+autoscaling/v2beta2
+ 
+Create a myapp deployment via autoscaling/v1 
+# kubectl run myapp --image=ikubernetes/myapp:v1 --replicas=1 --requests='cpu=50m,memory=256Mi' --limits='cpu=50m,memory=256Mi' --labels='app=myapp' --expose --port=80
+
+Set autoscaling for myapp
+# kubectl autoscale deployment myapp --min=1 --max=8 --cpu-percent=60
+
+Get hpa info
+# kubectl get hpa
+
+# patch service
+# kubectl get svc
+# kubectl patch svc myapp -p '{"spec":{"type":"NodePort"}}'
+
+# pressure test in Storage01 node
+# yum install httpd-tools-2.4.6-89.el7.centos.x86_64 -y
+# ab -c 100 -n 500000 http://10.0.2.20:32041/index.html
+
+# check change in hpa
+# kubectl describe hpa
+# kubectl get hpa
+-------------------------
+NAME    REFERENCE          TARGETS   MINPODS   MAXPODS   REPLICAS   AGE
+myapp   Deployment/myapp   93%/60%    1         8         4          23m
+----------------------------------
+the replicas autoscaling to 4
+# kubectl get pods
+NAME                               READY   STATUS    RESTARTS   AGE
+myapp-76d858cd4c-288bl             1/1     Running   0          49s
+myapp-76d858cd4c-2p8j4             1/1     Running   0          5m49s
+myapp-76d858cd4c-bdjcw             1/1     Running   0          49s
+myapp-76d858cd4c-x78zt             1/1     Running   0          31m
+
+Create a myapp deployment via autoscaling/v2
+# kubectl explain --api-version=autoscaling/v2beta1 hpa.spec.metrics.resource
+# kubectl delete hpa myapp
+# vi hpa-v2-demo.yaml
+--------------------
+apiVersion: autoscaling/v2beta1
+kind: HorizontalPodAutoscaler
+metadata:
+  name: myapp-hpa-v2
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: myapp
+  minReplicas: 1
+  maxReplicas: 10
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      targetAverageUtilization: 55
+  - type: Resource
+    resource:
+      name: memory
+      targetAverageValue: 50Mi
+-------------------------
+# kubectl apply -f hpa-v2-demo.yaml
+# kubectl get hpa
+support memory
+NAME           REFERENCE          TARGETS                  MINPODS   MAXPODS   REPLICAS   AGE
+myapp-hpa-v2   Deployment/myapp   <unknown>/50Mi, 0%/55%   1         10        1          36s
+# kubectl describe hpa 
+# kubectl get hpa
+
+Create a custom demo deployment via autoscaling/v2
+# vi hpa-v2-custom.yaml
+-------------------------
+apiVersion: autoscaling/v2beta1
+kind: HorizontalPodAutoscaler
+metadata:
+  name: myapp-hpa-v2
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: myapp
+  minReplicas: 1
+  maxReplicas: 10
+  metrics:
+  - type: Pods
+    pods:
+      metricsName: http_requests
+      targetAverageVaule: 800m
+-----------------------------
+
+
+
+
 
 
 
