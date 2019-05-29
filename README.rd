@@ -3248,7 +3248,7 @@ custom.metrics.k8s.io/v1beta1
 -------------------------------------------------
 
 9.setup grafana integrated with prometheus
-# /opt/k8s/manifests/metrics/k8s-prom/
+# cd /opt/k8s/manifests/metrics/k8s-prom/
 # cp -a /opt/k8s/manifests/metrics/heapster/grafana.yaml .
 # sed -i 's#namespace: kube-system#namespace: prom#g' grafana.yaml
 # sed -i 's/- name: INFLUXDB_HOST/# - name: INFLUXDB_HOST/g' grafana.yaml
@@ -3372,6 +3372,243 @@ spec:
       metricsName: http_requests
       targetAverageVaule: 800m
 -----------------------------
+
+
+Helm:
+1.install helm client
+# mkdir /opt/src
+# cd /opt/src
+# wget https://storage.googleapis.com/kubernetes-helm/helm-v2.14.0-linux-amd64.tar.gz
+# tar zxvf helm-v2.14.0-linux-amd64.tar.gz
+# cd linux-amd64/
+# mv helm /usr/bin 
+# helm --help
+
+2. install tiller server in k8s
+# mkdir /opt/k8s/manifest/helm
+# vi tiller-rbac.yaml
+----------------------------
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: tiller
+  namespace: kube-system
+---
+apiVersion: rbac.authorization.k8s.io/v1beta1
+kind: ClusterRoleBinding
+metadata:
+  name: tiller
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: cluster-admin
+subjects:
+  - kind: ServiceAccount
+    name: tiller
+    namespace: kube-system
+--------------------------------
+# kubectl apply -f tiller-rbac.yaml
+# kubectl get sa -n kube-system tiller
+# mkdir -p /root/.helm/repository/cache
+# vi /root/.helm/repository/repositories.yaml
+---------------------------------
+apiVersion: v1
+generated: 2019-05-28T11:18:19.490774427-04:00
+repositories:
+- caFile: ""
+  cache: /root/.helm/repository/cache/stable-index.yaml
+  certFile: ""
+  keyFile: ""
+  name: stable
+  password: ""
+  url: http://mirror.azure.cn/kubernetes/charts/
+  username: ""
+- caFile: ""
+  cache: /root/.helm/repository/cache/incubator-index.yaml
+  certFile: ""
+  keyFile: ""
+  name: incubator
+  password: ""
+  url: http://mirror.azure.cn/kubernetes/charts-incubator/
+  username: ""
+- caFile: ""
+  cache: /root/.helm/repository/cache/local-index.yaml
+  certFile: ""
+  keyFile: ""
+  name: local
+  password: ""
+  url: http://127.0.0.1:8879/charts
+  username: ""
+------------------------------------
+# vi /root/.helm/repository/cache/local-index.yaml
+-------------------------
+apiVersion: v1
+entries: {}
+generated: "2019-05-28T17:07:04.094451405+08:00"
+--------------------------------
+
+# helm init --service-account tiller --upgrade --tiller-image=registry.cn-hangzhou.aliyuncs.com/google_containers/tiller:v2.14.0
+
+Check tiller pod
+# kubectl get pods -n kube-system
+# helm version
+Client: &version.Version{SemVer:"v2.14.0", GitCommit:"05811b84a3f93603dd6c2fcfe57944dfa7ab7fd0", GitTreeState:"clean"}
+Server: &version.Version{SemVer:"v2.14.0", GitCommit:"05811b84a3f93603dd6c2fcfe57944dfa7ab7fd0", GitTreeState:"clean"}
+
+Update helm repo
+# helm repo update
+tips: find more official chart in https://hub.kubeapps.com
+
+check helm repo URL
+# helm repo list
+
+search chart in available repos
+# helm search 
+# helm search stable/jenkins
+
+Install memcached via helm chart
+# helm install --name mem1 stable/memcached
+
+Check helm deploy info
+# helm list
+
+Check details info
+# helm inspect
+
+Upgrade/rollout helm release
+# helm upgrade/rollout
+
+Delete memcached
+# helm delete mem1
+
+Create chart
+# helm create
+
+Download a chart package
+# helm get
+
+Download a chart and unpack
+# helm fetch
+
+install redis via chart
+# helm install --name redis-demo -f values.yaml stable/redis --version 3.7.6
+
+Check helm release status info
+# helm status
+
+Customize helm chart
+# helm create myapp 
+# tree ./myapp/
+./myapp/
+├── charts
+├── Chart.yaml
+├── templates
+│   ├── deployment.yaml
+│   ├── _helpers.tpl
+│   ├── ingress.yaml
+│   ├── NOTES.txt
+│   ├── service.yaml
+│   └── tests
+│       └── test-connection.yaml
+└── values.yaml
+
+# cd myapp/
+# vi Chart.yaml
+------------------------
+apiVersion: v1
+appVersion: "1.0"
+description: A Helm chart for Kubernetes myapp chart
+name: myapp
+version: 0.0.1
+maintainer:
+- name: admin
+  email: admin@example.com
+  url: http://www.example.com/
+-----------------------------
+# vi values.yaml
+-----------------------
+# Default values for myapp.
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+replicaCount: 2
+
+image:
+  repository: ikubernetes/myapp:v1
+  tag: v1
+  pullPolicy: IfNotPresent
+
+imagePullSecrets: []
+nameOverride: ""
+fullnameOverride: ""
+
+service:
+  type: ClusterIP
+  port: 80
+
+ingress:
+  enabled: false
+  annotations: {}
+  #  kubernetes.io/ingress.class: nginx
+  #  kubernetes.io/tls-acme: "true"
+  hosts:
+    - host: chart-example.local
+      paths: []
+
+  tls: []
+  #  - secretName: chart-example-tls
+  #    hosts:
+  #      - chart-example.local
+
+resources:
+  # We usually recommend not to specify default resources and to leave this as a conscious
+  # choice for the user. This also increases chances charts run on environments with little
+  # resources, such as Minikube. If you do want to specify resources, uncomment the following
+  # lines, adjust them as necessary, and remove the curly braces after 'resources:'.
+  limits:
+    cpu: 100m
+    memory: 128Mi
+  requests:
+    cpu: 100m
+    memory: 128Mi
+
+nodeSelector: {}
+
+tolerations: []
+
+affinity: {}
+-----------------------------
+# cd ..
+
+Check the grammar syntax
+# helm lint myapp
+# touch /root/.helm/repository/local/index.yaml
+
+Package myapp
+# helm package myapp
+
+Open local repo service
+# helm serve
+
+Check myapp in local repo
+# helm search myapp
+AME       	CHART VERSION	APP VERSION	DESCRIPTION
+local/myapp	0.0.1        	1.0        	A Helm chart for Kubernetes myapp chart
+
+# install myapp from local repp
+# helm install --name myapp-demo local/myapp
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
