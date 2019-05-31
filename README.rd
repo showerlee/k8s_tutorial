@@ -3595,15 +3595,363 @@ Check myapp in local repo
 AME       	CHART VERSION	APP VERSION	DESCRIPTION
 local/myapp	0.0.1        	1.0        	A Helm chart for Kubernetes myapp chart
 
-# install myapp from local repp
+install myapp from local repp
 # helm install --name myapp-demo local/myapp
 
+Setup 
+Install elasticsearch
+# cd /opt/k8s/manifest/helm/charts
+# helm fetch incubator/elasticsearch --version 1.4.1
+# tar xf elasticsearch-1.4.1.tgz
+# cd elasticsearch/
+# vi values.yaml
+---------------------------
+# Default values for elasticsearch.
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+appVersion: "6.4.2"
 
+image:
+  repository: "docker.elastic.co/elasticsearch/elasticsearch-oss"
+  tag: "6.4.2"
+  pullPolicy: "IfNotPresent"
+  # If specified, use these secrets to access the image
+  # pullSecrets:
+  #   - registry-secret
 
+initImage:
+  repository: "busybox"
+  tag: "latest"
+  pullPolicy: "Always"
 
+cluster:
+  name: "elasticsearch"
+  # If you want X-Pack installed, switch to an image that includes it, enable this option and toggle the features you want
+  # enabled in the environment variables outlined in the README
+  xpackEnable: false
+  # Some settings must be placed in a keystore, so they need to be mounted in from a secret.
+  # Use this setting to specify the name of the secret
+  # keystoreSecret: eskeystore
+  config: {}
+  # Custom parameters, as string, to be added to ES_JAVA_OPTS environment variable
+  additionalJavaOpts: ""
+  env:
+    # IMPORTANT: https://www.elastic.co/guide/en/elasticsearch/reference/current/important-settings.html#minimum_master_nodes
+    # To prevent data loss, it is vital to configure the discovery.zen.minimum_master_nodes setting so that each master-eligible
+    # node knows the minimum number of master-eligible nodes that must be visible in order to form a cluster.
+    MINIMUM_MASTER_NODES: "2"
 
+client:
+  name: client
+  replicas: 2
+  serviceType: ClusterIP
+  loadBalancerIP: {}
+  loadBalancerSourceRanges: {}
+## (dict) If specified, apply these annotations to the client service
+#  serviceAnnotations:
+#    example: client-svc-foo
+  heapSize: "512m"
+  antiAffinity: "soft"
+  nodeAffinity: {}
+  nodeSelector: {}
+  tolerations: []
+  resources:
+    limits:
+      cpu: "1"
+      # memory: "1024Mi"
+    requests:
+      cpu: "25m"
+      memory: "512Mi"
+  priorityClassName: ""
+  ## (dict) If specified, apply these annotations to each client Pod
+  # podAnnotations:
+  #   example: client-foo
+  podDisruptionBudget:
+    enabled: false
+    minAvailable: 1
+    # maxUnavailable: 1
 
+master:
+  name: master
+  exposeHttp: false
+  replicas: 2
+  heapSize: "512m"
+  persistence:
+    enabled: false
+    accessMode: ReadWriteOnce
+    name: data
+    size: "4Gi"
+    # storageClass: "ssd"
+  antiAffinity: "soft"
+  nodeAffinity: {}
+  nodeSelector: {}
+  tolerations: []
+  resources:
+    limits:
+      cpu: "1"
+      # memory: "1024Mi"
+    requests:
+      cpu: "25m"
+      memory: "512Mi"
+  priorityClassName: ""
+  ## (dict) If specified, apply these annotations to each master Pod
+  # podAnnotations:
+  #   example: master-foo
+  podDisruptionBudget:
+    enabled: false
+    minAvailable: 2  # Same as `cluster.env.MINIMUM_MASTER_NODES`
+    # maxUnavailable: 1
+  updateStrategy:
+    type: OnDelete
 
+data:
+  name: data
+  exposeHttp: false
+  replicas: 1
+  heapSize: "1536m"
+  persistence:
+    enabled: false
+    accessMode: ReadWriteOnce
+    name: data
+    size: "30Gi"
+    # storageClass: "ssd"
+  terminationGracePeriodSeconds: 3600
+  antiAffinity: "soft"
+  nodeAffinity: {}
+  nodeSelector: {}
+  tolerations: []
+  resources:
+    limits:
+      cpu: "1"
+      # memory: "2048Mi"
+    requests:
+      cpu: "25m"
+      memory: "1536Mi"
+  priorityClassName: ""
+  ## (dict) If specified, apply these annotations to each data Pod
+  # podAnnotations:
+  #   example: data-foo
+  podDisruptionBudget:
+    enabled: false
+    # minAvailable: 1
+    maxUnavailable: 1
+  updateStrategy:
+    type: OnDelete
+
+## Additional init containers
+extraInitContainers: |
+-----------------------------------
+# kubectl create ns efk
+# helm install --name els1 --namespace=efk -f values.yaml incubator/elasticsearch --version 1.10.2
+create a pods for testing els1
+# kubectl run cirror-$RANDOM --rm -it --image=cirros -- /bin/sh
+/ # nslookup els1-elasticsearch-client.efk.svc.cluster.local
+/ # curl els1-elasticsearch-client.efk.svc.cluster.local:9200
+----------------------------------------
+{
+  "name" : "els1-elasticsearch-client-667b977b7f-vcgrl",
+  "cluster_name" : "elasticsearch",
+  "cluster_uuid" : "_na_",
+  "version" : {
+    "number" : "6.3.1",
+    "build_flavor" : "oss",
+    "build_type" : "tar",
+    "build_hash" : "eb782d0",
+    "build_date" : "2018-06-29T21:59:26.107521Z",
+    "build_snapshot" : false,
+    "lucene_version" : "7.3.1",
+    "minimum_wire_compatibility_version" : "5.6.0",
+    "minimum_index_compatibility_version" : "5.0.0"
+  },
+  "tagline" : "You Know, for Search"
+}
+--------------------------------------------------
+/ # curl els1-elasticsearch-client.efk.svc.cluster.local:9200/_cat/nodes
+/ # curl els1-elasticsearch-client.efk.svc.cluster.local:9200/_cat/indices
+
+deploy fluentd to collect logs from each nodes and send logs to elasticsearch
+# cd /opt/k8s/manifest/helm/charts
+# helm fetch stable/fluentd-elasticsearch --version 1.0.0
+# tar xf fluentd-elasticsearch-1.0.0.tgz
+# cd fluentd-elasticsearch/
+# vi values.yaml
+change hosts: value to "els1-elasticsearch-client.efk.svc.cluster.local"
+change:
+-------------------
+tolerations: {}
+  # - key: node-role.kubernetes.io/master
+  #   operator: Exists
+  #   effect: NoSchedule
+--------------------
+to: 
+--------------------
+tolerations:
+  - key: node-role.kubernetes.io/master
+    operator: Exists
+    effect: NoSchedule
+--------------------
+
+change:
+--------------------
+annotations: {}
+  # prometheus.io/scrape: "true"
+  # prometheus.io/port: "24231"
+--------------------
+to
+--------------------
+annotations:
+  prometheus.io/scrape: "true"
+  prometheus.io/port: "24231"
+--------------------
+
+change:
+----------------------
+service: {}
+  # type: ClusterIP
+  # ports:
+  #   - name: "monitor-agent"
+  #     port: 24231
+---------------------------
+to
+-----------------------
+service:
+  type: ClusterIP
+  ports:
+    - name: "monitor-agent"
+      port: 24231
+---------------------------
+# helm install --name flu1 --namespace=efk -f values.yaml stable/fluentd-elasticsearch --version 1.0.0
+# helm status
+# helm list
+# kubectl get pods -n efk
+
+install kibana for ui virtualization
+# helm fetch stable/kibana --version 0.10.0
+# tar xf kibana-0.10.0.tgz
+# cd kibana
+# vi value.yaml
+---------------------
+image:
+  repository: "docker.elastic.co/kibana/kibana-oss"
+  tag: "6.3.1"
+  pullPolicy: "IfNotPresent"
+
+commandline:
+  args:
+
+env:
+  # All Kibana configuration options are adjustable via env vars.
+  # To adjust a config option to an env var uppercase + replace `.` with `_`
+  # Ref: https://www.elastic.co/guide/en/kibana/current/settings.html
+  #
+  # ELASTICSEARCH_URL: http://elasticsearch-client:9200
+  # SERVER_PORT: 5601
+  # LOGGING_VERBOSE: "true"
+  # SERVER_DEFAULTROUTE: "/app/kibana"
+
+files:
+  kibana.yml:
+    ## Default Kibana configuration from kibana-docker.
+    server.name: kibana
+    server.host: "0"
+    elasticsearch.url: http://els1-elasticsearch-client.efk.svc.cluster.local:9200
+
+    ## Custom config properties below
+    ## Ref: https://www.elastic.co/guide/en/kibana/current/settings.html
+    # server.port: 5601
+    # logging.verbose: "true"
+    # server.defaultRoute: "/app/kibana"
+
+service:
+  type: NodePort
+  externalPort: 443
+  internalPort: 5601
+  ## External IP addresses of service
+  ## Default: nil
+  ##
+  # externalIPs:
+  # - 192.168.0.1
+  #
+  ## LoadBalancer IP if service.type is LoadBalancer
+  ## Default: nil
+  ##
+  # loadBalancerIP: 10.2.2.2
+  # nodePort: 30000
+  annotations:
+    # Annotation example: setup ssl with aws cert when service.type is LoadBalancer
+    # service.beta.kubernetes.io/aws-load-balancer-ssl-cert: arn:aws:acm:us-east-1:EXAMPLE_CERT
+  labels:
+    ## Label example: show service URL in `kubectl cluster-info`
+    # kubernetes.io/cluster-service: "true"
+
+ingress:
+  enabled: false
+  # hosts:
+    # - chart-example.local
+  # annotations:
+  #   kubernetes.io/ingress.class: nginx
+  #   kubernetes.io/tls-acme: "true"
+  # tls:
+    # - secretName: chart-example-tls
+    #   hosts:
+    #     - chart-example.local
+
+# service account that will run the pod. Leave commented to use the default service account.
+# serviceAccountName: kibana
+
+resources: {}
+  # limits:
+  #   cpu: 100m
+  #   memory: 300Mi
+  # requests:
+  #   cpu: 100m
+  #   memory: 300Mi
+
+priorityClassName: ""
+
+# Affinity for pod assignment
+# Ref: https://kubernetes.io/docs/concepts/configuration/assign-pod-node/#affinity-and-anti-affinity
+# affinity: {}
+
+# Tolerations for pod assignment
+# Ref: https://kubernetes.io/docs/concepts/configuration/taint-and-toleration/
+tolerations: []
+
+# Node labels for pod assignment
+# Ref: https://kubernetes.io/docs/user-guide/node-selection/
+nodeSelector: {}
+
+podAnnotations: {}
+replicaCount: 1
+-------------------------
+# helm install --name kib1 --namespace=efk -f values.yaml stable/kibana --version 0.10.0
+# kubectl get pods -n efk
+NAME                                        READY   STATUS    RESTARTS   AGE
+els1-elasticsearch-client-b898c9d47-gjgsr   1/1     Running   0          62m
+els1-elasticsearch-client-b898c9d47-m8q56   1/1     Running   0          62m
+els1-elasticsearch-data-0                   1/1     Running   0          62m
+els1-elasticsearch-master-0                 1/1     Running   0          62m
+els1-elasticsearch-master-1                 1/1     Running   0          60m
+flu1-fluentd-elasticsearch-7z9xg            1/1     Running   2          21h
+flu1-fluentd-elasticsearch-vxfpd            1/1     Running   1          21h
+flu1-fluentd-elasticsearch-zphtg            1/1     Running   3          21h
+kib1-kibana-6d75d85fdb-bsnsn                1/1     Running   0          4m3s
+# kubectl get svc -n efk
+NAME                           TYPE        CLUSTER-IP       EXTERNAL-IP   PORT(S)         AGE
+els1-elasticsearch-client      ClusterIP   10.102.207.162   <none>        9200/TCP        63m
+els1-elasticsearch-discovery   ClusterIP   None             <none>        9300/TCP        63m
+flu1-fluentd-elasticsearch     ClusterIP   10.107.53.28     <none>        24231/TCP       21h
+kib1-kibana                    NodePort    10.108.223.225   <none>        443:30830/TCP   5m39s
+
+visit kibana for elasticsearch ui virtualization
+http://127.0.0.1:30830
+
+1.click Management in middle left
+2.fill in "logstash*" in Index pattern, and click Next step
+3.choose @timestamp in Time Filter field name
+4.back to Discover
+5.click visualize in middle left
+6.create a visualization-Basic Chart-pie
 
 
 
