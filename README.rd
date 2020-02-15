@@ -18,14 +18,14 @@ cd /etc/yum.repo.d/
 # wget https://mirrors.aliyun.com/kubernetes/yum/doc/rpm-package-key.gpg
 # wget https://mirrors.aliyun.com/kubernetes/yum/doc/yum-key.gpg
 # vi kubernetes.repo
-============================
+cat > kubernetes.repo <<EOF
 [kubernetes]
 name=Kubernetes Repo
 baseurl=https://mirrors.aliyun.com/kubernetes/yum/repos/kubernetes-el7-x86_64/
 gpgcheck=1
 gpgkey=https://mirrors.aliyun.com/kubernetes/yum/doc/yum-key.gpg
 enabled=1
-======================================
+EOF
 # rpm --import rpm-package-key.gpg
 # rpm --import yum-key.gpg
 # yum install https://download.docker.com/linux/centos/7/x86_64/stable/Packages/docker-ce-selinux-17.03.2.ce-1.el7.centos.noarch.rpm
