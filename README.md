@@ -140,7 +140,7 @@ storage01:  10.0.2.30/24
 
     ```
     systemctl enable kubelet docker
-    systemctl daemon-reload && systemctl restart docker kubelets
+    systemctl daemon-reload && systemctl restart docker kubelet
     ```
 
 11. kubeadm init
