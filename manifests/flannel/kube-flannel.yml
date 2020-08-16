@@ -1,5 +1,5 @@
 ---
-apiVersion: extensions/v1beta1
+apiVersion: policy/v1beta1
 kind: PodSecurityPolicy
 metadata:
   name: psp.flannel.unprivileged
@@ -31,7 +31,7 @@ spec:
   allowPrivilegeEscalation: false
   defaultAllowPrivilegeEscalation: false
   # Capabilities
-  allowedCapabilities: ['NET_ADMIN']
+  allowedCapabilities: ['NET_ADMIN', 'NET_RAW']
   defaultAddCapabilities: []
   requiredDropCapabilities: []
   # Host namespaces
@@ -43,7 +43,7 @@ spec:
     max: 65535
   # SELinux
   seLinux:
-    # SELinux is unsed in CaaSP
+    # SELinux is unused in CaaSP
     rule: 'RunAsAny'
 ---
 kind: ClusterRole
@@ -106,6 +106,7 @@ data:
   cni-conf.json: |
     {
       "name": "cbr0",
+      "cniVersion": "0.3.1",
       "plugins": [
         {
           "type": "flannel",
@@ -126,11 +127,11 @@ data:
     {
       "Network": "10.244.0.0/16",
       "Backend": {
-        "Type": "host-gw"
+        "Type": "vxlan"
       }
     }
 ---
-apiVersion: extensions/v1beta1
+apiVersion: apps/v1
 kind: DaemonSet
 metadata:
   name: kube-flannel-ds-amd64
@@ -139,22 +140,37 @@ metadata:
     tier: node
     app: flannel
 spec:
+  selector:
+    matchLabels:
+      app: flannel
   template:
     metadata:
       labels:
         tier: node
         app: flannel
     spec:
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                  - key: kubernetes.io/os
+                    operator: In
+                    values:
+                      - linux
+                  - key: kubernetes.io/arch
+                    operator: In
+                    values:
+                      - amd64
       hostNetwork: true
-      nodeSelector:
-        beta.kubernetes.io/arch: amd64
+      priorityClassName: system-node-critical
       tolerations:
       - operator: Exists
         effect: NoSchedule
       serviceAccountName: flannel
       initContainers:
       - name: install-cni
-        image: quay-mirror.qiniu.com/coreos/flannel:v0.11.0-amd64
+        image: registry.cn-hangzhou.aliyuncs.com/showerlee/flannel:v0.12.0-amd64
         command:
         - cp
         args:
@@ -168,7 +184,7 @@ spec:
           mountPath: /etc/kube-flannel/
       containers:
       - name: kube-flannel
-        image: quay-mirror.qiniu.com/coreos/flannel:v0.11.0-amd64
+        image: registry.cn-hangzhou.aliyuncs.com/showerlee/flannel:v0.12.0-amd64
         command:
         - /opt/bin/flanneld
         args:
@@ -184,7 +200,7 @@ spec:
         securityContext:
           privileged: false
           capabilities:
-             add: ["NET_ADMIN"]
+            add: ["NET_ADMIN", "NET_RAW"]
         env:
         - name: POD_NAME
           valueFrom:
@@ -210,7 +226,7 @@ spec:
           configMap:
             name: kube-flannel-cfg
 ---
-apiVersion: extensions/v1beta1
+apiVersion: apps/v1
 kind: DaemonSet
 metadata:
   name: kube-flannel-ds-arm64
@@ -219,22 +235,37 @@ metadata:
     tier: node
     app: flannel
 spec:
+  selector:
+    matchLabels:
+      app: flannel
   template:
     metadata:
       labels:
         tier: node
         app: flannel
     spec:
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                  - key: kubernetes.io/os
+                    operator: In
+                    values:
+                      - linux
+                  - key: kubernetes.io/arch
+                    operator: In
+                    values:
+                      - arm64
       hostNetwork: true
-      nodeSelector:
-        beta.kubernetes.io/arch: arm64
+      priorityClassName: system-node-critical
       tolerations:
       - operator: Exists
         effect: NoSchedule
       serviceAccountName: flannel
       initContainers:
       - name: install-cni
-        image: quay-mirror.qiniu.com/coreos/flannel:v0.11.0-arm64
+        image: registry.cn-hangzhou.aliyuncs.com/showerlee/flannel:v0.12.0-arm64
         command:
         - cp
         args:
@@ -248,7 +279,7 @@ spec:
           mountPath: /etc/kube-flannel/
       containers:
       - name: kube-flannel
-        image: quay-mirror.qiniu.com/coreos/flannel:v0.11.0-arm64
+        image: registry.cn-hangzhou.aliyuncs.com/showerlee/flannel:v0.12.0-arm64
         command:
         - /opt/bin/flanneld
         args:
@@ -264,7 +295,7 @@ spec:
         securityContext:
           privileged: false
           capabilities:
-             add: ["NET_ADMIN"]
+             add: ["NET_ADMIN", "NET_RAW"]
         env:
         - name: POD_NAME
           valueFrom:
@@ -290,7 +321,7 @@ spec:
           configMap:
             name: kube-flannel-cfg
 ---
-apiVersion: extensions/v1beta1
+apiVersion: apps/v1
 kind: DaemonSet
 metadata:
   name: kube-flannel-ds-arm
@@ -299,22 +330,37 @@ metadata:
     tier: node
     app: flannel
 spec:
+  selector:
+    matchLabels:
+      app: flannel
   template:
     metadata:
       labels:
         tier: node
         app: flannel
     spec:
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                  - key: kubernetes.io/os
+                    operator: In
+                    values:
+                      - linux
+                  - key: kubernetes.io/arch
+                    operator: In
+                    values:
+                      - arm
       hostNetwork: true
-      nodeSelector:
-        beta.kubernetes.io/arch: arm
+      priorityClassName: system-node-critical
       tolerations:
       - operator: Exists
         effect: NoSchedule
       serviceAccountName: flannel
       initContainers:
       - name: install-cni
-        image: quay-mirror.qiniu.com/coreos/flannel:v0.11.0-arm
+        image: registry.cn-hangzhou.aliyuncs.com/showerlee/flannel:v0.12.0-arm
         command:
         - cp
         args:
@@ -328,7 +374,7 @@ spec:
           mountPath: /etc/kube-flannel/
       containers:
       - name: kube-flannel
-        image: quay-mirror.qiniu.com/coreos/flannel:v0.11.0-arm
+        image: registry.cn-hangzhou.aliyuncs.com/showerlee/flannel:v0.12.0-arm
         command:
         - /opt/bin/flanneld
         args:
@@ -344,7 +390,7 @@ spec:
         securityContext:
           privileged: false
           capabilities:
-             add: ["NET_ADMIN"]
+             add: ["NET_ADMIN", "NET_RAW"]
         env:
         - name: POD_NAME
           valueFrom:
@@ -370,7 +416,7 @@ spec:
           configMap:
             name: kube-flannel-cfg
 ---
-apiVersion: extensions/v1beta1
+apiVersion: apps/v1
 kind: DaemonSet
 metadata:
   name: kube-flannel-ds-ppc64le
@@ -379,22 +425,37 @@ metadata:
     tier: node
     app: flannel
 spec:
+  selector:
+    matchLabels:
+      app: flannel
   template:
     metadata:
       labels:
         tier: node
         app: flannel
     spec:
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                  - key: kubernetes.io/os
+                    operator: In
+                    values:
+                      - linux
+                  - key: kubernetes.io/arch
+                    operator: In
+                    values:
+                      - ppc64le
       hostNetwork: true
-      nodeSelector:
-        beta.kubernetes.io/arch: ppc64le
+      priorityClassName: system-node-critical
       tolerations:
       - operator: Exists
         effect: NoSchedule
       serviceAccountName: flannel
       initContainers:
       - name: install-cni
-        image: quay-mirror.qiniu.com/coreos/flannel:v0.11.0-ppc64le
+        image: registry.cn-hangzhou.aliyuncs.com/showerlee/flannel:v0.12.0-ppc64le
         command:
         - cp
         args:
@@ -408,7 +469,7 @@ spec:
           mountPath: /etc/kube-flannel/
       containers:
       - name: kube-flannel
-        image: quay-mirror.qiniu.com/coreos/flannel:v0.11.0-ppc64le
+        image: registry.cn-hangzhou.aliyuncs.com/showerlee/flannel:v0.12.0-ppc64le
         command:
         - /opt/bin/flanneld
         args:
@@ -424,7 +485,7 @@ spec:
         securityContext:
           privileged: false
           capabilities:
-             add: ["NET_ADMIN"]
+             add: ["NET_ADMIN", "NET_RAW"]
         env:
         - name: POD_NAME
           valueFrom:
@@ -450,7 +511,7 @@ spec:
           configMap:
             name: kube-flannel-cfg
 ---
-apiVersion: extensions/v1beta1
+apiVersion: apps/v1
 kind: DaemonSet
 metadata:
   name: kube-flannel-ds-s390x
@@ -459,22 +520,37 @@ metadata:
     tier: node
     app: flannel
 spec:
+  selector:
+    matchLabels:
+      app: flannel
   template:
     metadata:
       labels:
         tier: node
         app: flannel
     spec:
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                  - key: kubernetes.io/os
+                    operator: In
+                    values:
+                      - linux
+                  - key: kubernetes.io/arch
+                    operator: In
+                    values:
+                      - s390x
       hostNetwork: true
-      nodeSelector:
-        beta.kubernetes.io/arch: s390x
+      priorityClassName: system-node-critical
       tolerations:
       - operator: Exists
         effect: NoSchedule
       serviceAccountName: flannel
       initContainers:
       - name: install-cni
-        image: quay-mirror.qiniu.com/coreos/flannel:v0.11.0-s390x
+        image: registry.cn-hangzhou.aliyuncs.com/showerlee/flannel:v0.12.0-s390x
         command:
         - cp
         args:
@@ -488,7 +564,7 @@ spec:
           mountPath: /etc/kube-flannel/
       containers:
       - name: kube-flannel
-        image: quay-mirror.qiniu.com/coreos/flannel:v0.11.0-s390x
+        image: registry.cn-hangzhou.aliyuncs.com/showerlee/flannel:v0.12.0-s390x
         command:
         - /opt/bin/flanneld
         args:
@@ -504,7 +580,7 @@ spec:
         securityContext:
           privileged: false
           capabilities:
-             add: ["NET_ADMIN"]
+             add: ["NET_ADMIN", "NET_RAW"]
         env:
         - name: POD_NAME
           valueFrom:
