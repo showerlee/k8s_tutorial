@@ -84,7 +84,7 @@ storage01:  10.0.2.30/24
     ```
     cat > ~/pullimages.sh <<EOF
     #!/bin/bash
-    images=(kube-apiserver:v1.17.2 kube-controller-manager:v1.17.2 kube-scheduler:v1.17.2 kube-proxy:v1.17.2 pause:3.1 etcd:3.4.3-0 coredns:1.17.2 nginx-ingress-controller:0.28.0)
+    images=(kube-apiserver:v1.17.2 kube-controller-manager:v1.17.2 kube-scheduler:v1.17.2 kube-proxy:v1.17.2 pause:3.1 etcd:3.4.3-0 coredns:1.17.2 nginx-ingress-controller:0.28.0 flannel:v0.12.0-amd64)
 
     for img in ${images[@]}
     do
