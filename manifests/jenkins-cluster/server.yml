@@ -20,7 +20,7 @@ spec:
     spec:
       containers:
         - name: jenkins
-          image: registry.cn-hangzhou.aliyuncs.com/showerlee/jenkins:2.60.3
+          image: registry.cn-hangzhou.aliyuncs.com/showerlee/jenkins:2.255
           ports:
             - containerPort: 8080
             - containerPort: 50000
