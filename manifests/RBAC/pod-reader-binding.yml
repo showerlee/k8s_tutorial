@@ -1,0 +1,13 @@
+kind: RoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  namespace: dev-monitor
+  name: read-pods
+subjects:
+- kind: ServiceAccount
+  name: showerlee
+  namespace: dev-monitor
+roleRef:
+  kind: Role
+  name: pod-reader
+  apiGroup: rbac.authorization.k8s.io
