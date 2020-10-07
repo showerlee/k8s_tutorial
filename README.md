@@ -2,6 +2,8 @@
 
 ## Architecture
 
+![k8s framework](./docs/k8s.png)
+
 Version: 1.17.2
 
 ```
