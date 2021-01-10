@@ -1,0 +1,18 @@
+pipeline {
+  agent {
+    kubernetes {
+      label 'maven-build'
+      defaultContainer 'maven'
+      yamlFile 'manifests/jenkins/k8s-ci-maven-pod.yml'
+    }
+  }
+  stages {
+    stage('Run maven') {
+      steps {
+        container('maven') {
+          sh 'mvn -version'
+        }
+      }
+    }
+  }
+}
