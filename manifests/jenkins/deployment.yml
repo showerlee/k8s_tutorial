@@ -4,9 +4,7 @@ metadata:
   name: jenkins-example
   namespace: jenkins
   labels:
-    heritage: "Tiller"
     release: "jenkins-example"
-    chart: "jenkins-0.13.5"
     component: "jenkins-example-jenkins-master"
 spec:
   replicas: 1
@@ -19,9 +17,7 @@ spec:
     metadata:
       labels:
         app: jenkins-example
-        heritage: "Tiller"
         release: "jenkins-example"
-        chart: "jenkins-0.13.5"
         component: "jenkins-example-jenkins-master"
       annotations:
         checksum/config: a2a9ef545dde8206f9b645016f149f731e5f37f7c46327fdc49371befe7094aa
@@ -224,3 +220,18 @@ spec:
   selector:
     component: "jenkins-example-jenkins-master"
   type: NodePort
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: jenkins-example-agent
+  namespace: jenkins
+  labels:
+    component: "jenkins-example-jenkins-master"
+spec:
+  ports:
+    - port: 50000
+      targetPort: 50000
+  selector:
+    component: "jenkins-example-jenkins-master"
+  type: ClusterIP
