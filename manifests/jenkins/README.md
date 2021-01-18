@@ -45,6 +45,15 @@ echo 'YWRtaW4=' | base64 --decode
 ```bash
 kubectl apply -f manifests/jenkins/deployment.yml
 ```
+
+### Check volumes.hostPath `jenkins_home` on Docker VM of docker-desktop
+
+```bash
+docker run -it --rm --privileged --pid=host justincormack/nsenter1
+cd /containers/services/docker/tmp/upper/var/jenkins_home
+...
+```
+
 ### Jenkins pieline
 
 We can simply create a Jenkins pipeline job and config our current github repo with relative path of Jenkinsfile `manifests/jenkins/Jenkinsfile`

@@ -22,6 +22,9 @@ spec:
       annotations:
         checksum/config: a2a9ef545dde8206f9b645016f149f731e5f37f7c46327fdc49371befe7094aa
     spec:
+      securityContext:
+        fsGroup: 1000
+        runAsUser: 0
       initContainers:
         - name: "copy-default-config"
           image: "jenkins/jenkins:lts"
@@ -36,6 +39,8 @@ spec:
               name: plugin-dir
             - mountPath: /usr/share/jenkins/ref/secrets/
               name: secrets-dir
+          securityContext:
+            allowPrivilegeEscalation: true
       containers:
         - name: jenkins-example
           image: "jenkins/jenkins:2.263.1-lts-jdk11"
@@ -82,6 +87,8 @@ spec:
             - mountPath: /usr/share/jenkins/ref/secrets/
               name: secrets-dir
               readOnly: false
+          securityContext:
+            allowPrivilegeEscalation: true
       volumes:
         - name: jenkins-config
           configMap:
@@ -91,7 +98,9 @@ spec:
         - name: secrets-dir
           emptyDir: {}
         - name: jenkins-home
-          emptyDir: {}
+          hostPath:
+            path: /var/jenkins_home
+            type: DirectoryOrCreate
 ---
 apiVersion: v1
 kind: ConfigMap
