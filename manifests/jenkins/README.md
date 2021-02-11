@@ -20,6 +20,12 @@ Furthermore, we embed `Nodeport` to Jenkins master so that we can visit Jenkins 
 kubectl create namespace jenkins
 ```
 
+### Allow k8s plugin with proper access initiallizes agent pods in namespace `jenkins`
+
+```
+kubectl create clusterrolebinding permissive-binding --clusterrole=cluster-admin --user=admin --user=kubelet --group=system:serviceaccounts:jenkins
+```
+
 ### Setup credential
 
 - Create Jenkins username/password via `secret`
