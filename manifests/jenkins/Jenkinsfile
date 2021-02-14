@@ -1,7 +1,7 @@
 pipeline {
   agent {
     kubernetes {
-      label 'maven-build'
+      inheritFrom 'maven-build'
       defaultContainer 'maven'
       yamlFile 'manifests/jenkins/k8s-ci-maven-pod.yml'
     }
