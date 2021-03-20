@@ -107,7 +107,7 @@ The Bookinfo application is deployed but not accessible from the outside. To mak
     Checking `istio-ingressgateway` logs which confimred the issue as well
 
     ```
-    $ kubectl logs istio-egressgateway-5d748f86d5-xxgmw -n istio-system
+    $ kubectl logs istio-ingressgateway-5d748f86d5-xxgmw -n istio-system
     "GET /productpage HTTP/1.1" 503 UF,URX upstream_reset_before_response_started{connection_failure,TLS_error:_268436501:SSL_routines:OPENSSL_internal:SSLV3_ALERT_CERTIFICATE_EXPIRED} - "TLS error: 268436501:SSL routines:OPENSSL_internal:SSLV3_ALERT_CERTIFICATE_EXPIRED" 0 201 17 - "192.168.65.3" "curl/7.64.1" "7551a421-5b82-9f0d-a2a8-f37ee91ed618" "localhost" "10.1.0.38:9080" outbound|9080||productpage.default.svc.cluster.local - 10.1.0.7:8080 192.168.65.3:59734 - -
     ```
 
