@@ -71,6 +71,15 @@
 8. Checkout details 
 
     ```
+    $ kubectl get pod -o wide
+    NAME                        READY   STATUS    RESTARTS   AGE     IP          NODE             NOMINATED NODE   READINESS GATES
+    myapp-v1-86c67b56d6-rp7bb   2/2     Running   0          2m48s   10.1.0.72   docker-desktop   <none>           <none>
+    myapp-v2-777cb445f9-t2jv5   2/2     Running   0          2m48s   10.1.0.73   docker-desktop   <none>           <none>
+
+    $ kubectl get endpoints myapp-svc -o wide
+    NAME        ENDPOINTS                   AGE
+    myapp-svc   10.1.0.72:80,10.1.0.73:80   3m33s
+
     $ kubectl describe gateways myapp-gw
     ...
     Spec:
@@ -84,8 +93,7 @@
           Number:    80
           Protocol:  HTTP
     ...
-    ```
-    ```
+
     $ kubectl describe virtualservices myapp-vs
     ...
     Spec:
@@ -109,13 +117,11 @@
           Weight:      10
     ...
     ```
-    Istio `gateways` will expose `myapp.example.com` with `80` port and bind to `virtualservices` so as to route the service traffic `myapp-svc` with corresponding weight of each canary versions(v1,v2).
+    Istio `gateways` will expose `myapp.example.com` with `80` port and bind to `virtualservices` so as to route the traffic of service `myapp-svc` with corresponding weight of each canary versions(v1,v2).
 
     In this demo:
     - v1 has weight 90 which means `nine tenth of the requests` will be sent to the canary version 1
     - v2 has weight 10 which means only `one tenth of the requests` will be sent to the canary version 2
-  
-    We could redeploy the route weight to determine what percentage of the requests will be sent to the certain canary version later depend on any metrics or testing that affect the availability of the canary versions, regardless of how many replicas of each version are running.
 
 9. Continue calling the host
 
@@ -124,14 +130,19 @@
     Hello MyApp | Version: v1 | <a href="hostname.html">Pod Name</a>
     Hello MyApp | Version: v2 | <a href="hostname.html">Pod Name</a>
     Hello MyApp | Version: v1 | <a href="hostname.html">Pod Name</a>
-    Hello MyApp | Version: v2 | <a href="hostname.html">Pod Name</a>
     Hello MyApp | Version: v1 | <a href="hostname.html">Pod Name</a>
     Hello MyApp | Version: v1 | <a href="hostname.html">Pod Name</a>
     Hello MyApp | Version: v1 | <a href="hostname.html">Pod Name</a>
-    Hello MyApp | Version: v2 | <a href="hostname.html">Pod Name</a>
+    Hello MyApp | Version: v1 | <a href="hostname.html">Pod Name</a>
+    Hello MyApp | Version: v1 | <a href="hostname.html">Pod Name</a>
     ```
+    We are happy to see the requests output are based on the istio weight and canary deployment is achievable.
 
 10. Adjust the route weight
+
+    We could redeploy the route weight to determine what percentage of the requests will be sent to the certain canary version later depend on any metrics or testing that affect the availability of the canary versions, regardless of how many replicas of each version are running.
+
+    In this demo, we just adjust it manually, feel free to automate via any metrics or testing standard
 
     ```
     # Each half for v1 and v2
@@ -139,5 +150,22 @@
     # Rollback to v1
     kubectl apply -f ./canary-demo/rollback.yaml
     ```
+    More details: https://istio.io/latest/docs/reference/config/networking/virtual-service/#HTTPRouteDestination
 
+11. Autoscaling the deployments(optional)
 
+    Because we don’t need to maintain replica ratios anymore, we can safely add Kubernetes horizontal pod autoscalers to manage the replicas for both version Deployments:
+
+    ```
+    $ kubectl autoscale deployment myapp-v1 --cpu-percent=50 --min=1 --max=10
+    deployment "myapp-v1" autoscaled
+
+    $ kubectl autoscale deployment myapp-v2 --cpu-percent=50 --min=1 --max=10
+    deployment "myapp-v2" autoscaled
+
+    $ kubectl get hpa
+    NAME           REFERENCE                 TARGET  CURRENT  MINPODS  MAXPODS  AGE
+    myapp-v1  Deployment/myapp-v1  50%     47%      1        10       17s
+    myapp-v2  Deployment/myapp-v2  50%     40%      1        10       15s
+    ```
+    Details: https://istio.io/latest/blog/2017/0.1-canary/#autoscaling-the-deployments
