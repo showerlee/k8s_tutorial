@@ -1,4 +1,4 @@
-# ISTIO
+# Istioctl
 
 ## Setup istio in docker-desktop
 Details: https://istio.io/latest/docs/setup/getting-started/

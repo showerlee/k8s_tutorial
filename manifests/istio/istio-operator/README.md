@@ -1,4 +1,4 @@
-# ISTIO
+# Istio Operator
 
 ## Setup istio in docker-desktop via [Istio Operator](https://istio.io/latest/docs/setup/install/operator/)
 
