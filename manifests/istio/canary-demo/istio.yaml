@@ -1,7 +1,7 @@
 apiVersion: networking.istio.io/v1alpha3
 kind: Gateway
 metadata:
-  name: myapp
+  name: myapp-gw
 spec:
   selector:
     istio: ingressgateway # use istio default controller
@@ -16,22 +16,22 @@ spec:
 apiVersion: networking.istio.io/v1alpha3
 kind: VirtualService
 metadata:
-  name: myapp
+  name: myapp-vs
 spec:
   hosts:
     - "*"
   gateways:
-    - myapp
+    - myapp-gw
   http:
   - route:
     - destination:
-        host: myapp
+        host: myapp-svc
         subset: v1
         port:
           number: 80
       weight: 90
     - destination:
-        host: myapp
+        host: myapp-svc
         subset: v2
         port:
           number: 80
@@ -40,9 +40,9 @@ spec:
 apiVersion: networking.istio.io/v1alpha3
 kind: DestinationRule
 metadata:
-  name: myapp
+  name: myapp-dr
 spec:
-  host: myapp
+  host: myapp-svc
   subsets:
   - name: v1
     labels:
