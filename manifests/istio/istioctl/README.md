@@ -95,6 +95,12 @@ The Bookinfo application is deployed but not accessible from the outside. To mak
     istioctl dashboard kiali
     ```
 
+13. Delete Istio env completely
+
+    ```
+    istioctl x uninstall --purge
+    ```
+
 ## Notice
 
 - Once you encounter the following error, that's because `istio-ingressgateway` is running for a long time and `SSLV3_ALERT_CERTIFICATE_EXPIRED` means cert is expired.
