@@ -114,5 +114,5 @@ The Bookinfo application is deployed but not accessible from the outside. To mak
     The easy alternative is just to restart the pod `istio-ingressgateway` and the issue should be getting fixed.
 
     ```
-    $ kubectl delete pod istio-egressgateway-5d748f86d5-xxgmw -n istio-system
+    $ kubectl delete pod -n istio-system istio-ingressgateway-67d647b4-hjc4t
     ```
