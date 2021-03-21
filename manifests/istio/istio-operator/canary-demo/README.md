@@ -145,7 +145,7 @@ This is a canary-demo that helps you achieve the canary deployment via istio wit
     deployment "myapp-v2" autoscaled
 
     $ kubectl get hpa
-    NAME           REFERENCE                 TARGET  CURRENT  MINPODS  MAXPODS  AGE
+    NAME           REFERENCE       TARGET  CURRENT  MINPODS  MAXPODS  AGE
     myapp-v1  Deployment/myapp-v1  50%     47%      1        10       17s
     myapp-v2  Deployment/myapp-v2  50%     40%      1        10       15s
     ```
@@ -160,6 +160,10 @@ This is a canary-demo that helps you achieve the canary deployment via istio wit
     Les's say only the following request pattern would call `myapp.example.com` successfully.
 
     ```
+    # Restrict custom header
+    kubectl apply -f ./matchRequest.yaml
+
+    # Success if contains the header
     curl --location --request GET 'myapp.example.com' \
     --header 'end-user: leon'
     ```
