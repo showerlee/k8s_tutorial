@@ -62,13 +62,35 @@
     sudo echo -e "127.0.0.1 myapp.example.com" >> /etc/hosts
     ```
 
-7. Deploy canary-demo in istio
-   
+7. Generate client and server certificates and keys
+
+    - Create a root certificate and private key to sign the certificate for your services:
+
+        ```
+        openssl req -x509 -sha256 -nodes -days 365 -newkey rsa:2048 -subj '/O=example Inc./CN=example.com' -keyout example.com.key -out example.com.crt
+        ```
+
+    - Create a certificate and a private key for myapp.example.com:
+
+        ```
+        openssl req -out myapp.example.com.csr -newkey rsa:2048 -nodes -keyout myapp.example.com.key -subj "/CN=myapp.example.com/O=myapp organization"
+        openssl x509 -req -days 365 -CA example.com.crt -CAkey example.com.key -set_serial 0 -in myapp.example.com.csr -out myapp.example.com.crt
+        ```
+
+    - Create a Kubernetes Secret to hold the server’s certificate.
+
+        ```
+        kubectl create -n istio-system secret tls myapp-credential --key=myapp.example.com.key --cert=myapp.example.com.crt
+        ```
+    More details: https://istio.io/latest/docs/tasks/traffic-management/ingress/secure-ingress/
+
+8. Deploy canary-demo in istio
+
     ```
     kubectl apply -f ./canary-demo/common/
     ```
 
-8. Checkout details 
+9.  Checkout detailed outcome
 
     ```
     $ kubectl get pod -o wide
@@ -92,6 +114,15 @@
           Name:      http
           Number:    80
           Protocol:  HTTP
+        Hosts:
+          myapp.example.com
+        Port:
+          Name:      https
+          Number:    443
+          Protocol:  HTTPS
+        Tls:
+          Credential Name:  myapp-credential
+          Mode:             SIMPLE
     ...
 
     $ kubectl describe virtualservices myapp-vs
@@ -117,16 +148,16 @@
           Weight:      10
     ...
     ```
-    Istio `gateways` will expose `myapp.example.com` with `80` port and bind to `virtualservices` so as to route the traffic of service `myapp-svc` with corresponding weight of each canary versions(v1,v2).
+    Istio `gateways` will expose `myapp.example.com` with `80`/`443` ports and bind to `virtualservices` so as to route the traffic of service `myapp-svc` with corresponding weight of each canary versions(v1,v2).
 
     In this demo:
     - v1 has weight 90 which means `nine tenth of the requests` will be sent to the canary version 1
     - v2 has weight 10 which means only `one tenth of the requests` will be sent to the canary version 2
 
-9. Continue calling the host
+10. Continue calling the host
 
     ```
-    $ while true; do curl myapp.example.com; sleep 1; done
+    $ while true; do curl --insecure https://myapp.example.com; sleep 1; done
     Hello MyApp | Version: v1 | <a href="hostname.html">Pod Name</a>
     Hello MyApp | Version: v2 | <a href="hostname.html">Pod Name</a>
     Hello MyApp | Version: v1 | <a href="hostname.html">Pod Name</a>
@@ -136,9 +167,9 @@
     Hello MyApp | Version: v1 | <a href="hostname.html">Pod Name</a>
     Hello MyApp | Version: v1 | <a href="hostname.html">Pod Name</a>
     ```
-    We are happy to see the requests output are based on the istio weight and canary deployment is achievable.
+    We are happy to see the https request output are based on the istio weight and canary deployment is achievable.
 
-10. Adjust the route weight
+11. Adjust the route weight
 
     We could redeploy the route weight to determine what percentage of the requests will be sent to the certain canary version later depend on any metrics or testing that affect the availability of the canary versions, regardless of how many replicas of each version are running.
 
@@ -152,7 +183,7 @@
     ```
     More details: https://istio.io/latest/docs/reference/config/networking/virtual-service/#HTTPRouteDestination
 
-11. Autoscaling the deployments(optional)
+12. Autoscaling the deployments(optional)
 
     Because we don’t need to maintain replica ratios anymore, we can safely add Kubernetes horizontal pod autoscalers to manage the replicas for both version Deployments:
 
@@ -170,7 +201,7 @@
     ```
     More Details: https://istio.io/latest/blog/2017/0.1-canary/#autoscaling-the-deployments
 
-12. HTTPMatchRequest 
+13. HTTPMatchRequest
 
     HttpMatchRequest specifies a set of criterion to be met in order for the rule to be applied to the HTTP request. 
     
@@ -184,7 +215,7 @@
     ```
     More details: https://istio.io/latest/docs/reference/config/networking/virtual-service/#HTTPMatchRequest
 
-13. HTTPFaultInjection
+14. HTTPFaultInjection
 
     HTTPFaultInjection can be used to specify one or more faults to inject while forwarding HTTP requests to the destination specified in a route. Fault specification is part of a VirtualService rule. Faults include aborting the Http request from downstream service, and/or delaying proxying of requests. A fault rule MUST HAVE delay or abort or both.
 

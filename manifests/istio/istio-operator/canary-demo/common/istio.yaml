@@ -12,6 +12,17 @@ spec:
       protocol: HTTP
     hosts:
       - myapp.example.com
+    # tls:
+    #   httpsRedirect: true
+  - port:
+      number: 443
+      name: https
+      protocol: HTTPS
+    hosts:
+      - myapp.example.com
+    tls:
+      mode: SIMPLE # enables HTTPS on this port
+      credentialName: myapp-credential # fetches certs from Kubernetes secret
 ---
 apiVersion: networking.istio.io/v1alpha3
 kind: VirtualService
