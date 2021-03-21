@@ -168,4 +168,33 @@
     myapp-v1  Deployment/myapp-v1  50%     47%      1        10       17s
     myapp-v2  Deployment/myapp-v2  50%     40%      1        10       15s
     ```
-    Details: https://istio.io/latest/blog/2017/0.1-canary/#autoscaling-the-deployments
+    More Details: https://istio.io/latest/blog/2017/0.1-canary/#autoscaling-the-deployments
+
+12. HTTPMatchRequest 
+
+    HttpMatchRequest specifies a set of criterion to be met in order for the rule to be applied to the HTTP request. 
+    
+    For example, the following restricts the rule to match only requests where the URL path starts with / and the request contains a custom `end-user` header with value `leon`.
+
+    Les's say only the following request pattern would call `myapp.example.com` successfully.
+
+    ```
+    curl --location --request GET 'myapp.example.com' \
+    --header 'end-user: leon'
+    ```
+    More details: https://istio.io/latest/docs/reference/config/networking/virtual-service/#HTTPMatchRequest
+
+13. HTTPFaultInjection
+
+    HTTPFaultInjection can be used to specify one or more faults to inject while forwarding HTTP requests to the destination specified in a route. Fault specification is part of a VirtualService rule. Faults include aborting the Http request from downstream service, and/or delaying proxying of requests. A fault rule MUST HAVE delay or abort or both.
+
+    - Delay specification is used to inject latency into the request forwarding path. The following example will introduce a 5 second delay in 100% requests to the “v1” version
+        ```
+        kubectl apply -f ./canary-demo/delay.yaml
+        ```
+
+    - Abort specification is used to prematurely abort a request with a pre-specified error code. The following example will return an HTTP 404 error code for 100% requests to the “ratings” service “v1” and "v2"
+        ```
+        kubectl apply -f ./canary-demo/abort.yaml
+        ```
+    More details: https://istio.io/latest/docs/reference/config/networking/virtual-service/#HTTPFaultInjection
