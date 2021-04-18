@@ -183,3 +183,10 @@ This is a canary-demo that helps you achieve the canary deployment via istio wit
         kubectl apply -f ./abort.yaml
         ```
     More details: https://istio.io/latest/docs/reference/config/networking/virtual-service/#HTTPFaultInjection
+
+## Notice
+
+- Got `upstream connect error or disconnect/reset before headers. reset reason: connection failure, transport failure reason: TLS error: 268435581:SSL routines:OPENSSL_internal:CERTIFICATE_VERIFY_FAILE`
+
+Should be a long time running on Docker-desktop caused the gatway is idle.
+Just restart the pod or re-deploy the manifest fixed this issue.
