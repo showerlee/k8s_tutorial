@@ -112,3 +112,9 @@ Details: https://istio.io/latest/docs/setup/getting-started/
     kubectl apply -f istio-1.10.3/samples/bookinfo/networking/virtual-service-all-v1.yaml
     kubectl apply -f istio-1.10.3/samples/bookinfo/networking/destination-rule-all.yaml
     ```
+
+6. Change traffic route to v2 only
+    ```
+    kubectl apply -f istio-1.10.3/samples/bookinfo/networking/virtual-service-all-v2.yaml
+    kubectl apply -f istio-1.10.3/samples/bookinfo/networking/destination-rule-all.yaml
+    ```
