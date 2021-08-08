@@ -105,3 +105,10 @@ Details: https://istio.io/latest/docs/setup/getting-started/
     ```
     curl http://localhost/productpage
     ```
+
+5. Change traffic route to v1 only
+
+    ```
+    kubectl apply -f istio-1.10.3/samples/bookinfo/networking/virtual-service-all-v1.yaml
+    kubectl apply -f istio-1.10.3/samples/bookinfo/networking/destination-rule-all.yaml
+    ```
