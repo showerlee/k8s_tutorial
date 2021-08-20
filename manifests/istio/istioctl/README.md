@@ -118,3 +118,21 @@ Details: https://istio.io/latest/docs/setup/getting-started/
     kubectl apply -f istio-1.10.3/samples/bookinfo/networking/virtual-service-all-v2.yaml
     kubectl apply -f istio-1.10.3/samples/bookinfo/networking/destination-rule-all.yaml
     ```
+
+7. Expose details via gateway.
+    ```
+    # Allow any domains to access
+    kubectl apply -f istio-1.10.3/samples/bookinfo/networking/details-gateway.yaml
+    # Check details output
+    curl localhost/details/0
+    # Check health output
+    curl localhost/health
+    ```
+    ```
+    # Only allow details.example.com to access
+    kubectl apply -f istio-1.10.3/samples/bookinfo/networking/details-gateway-custom-host.yaml
+    # Check details output
+    curl --header "host: details.example.com" localhost/details/0
+    # Check health output
+    curl --header "host: details.example.com" localhost/health
+    ```

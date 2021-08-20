@@ -1,0 +1,36 @@
+apiVersion: networking.istio.io/v1alpha3
+kind: Gateway
+metadata:
+  name: details-gateway
+spec:
+  selector:
+    istio: ingressgateway # use istio default controller
+  servers:
+  - port:
+      number: 80
+      name: http
+      protocol: HTTP
+    hosts:
+    - "*"
+---
+apiVersion: networking.istio.io/v1alpha3
+kind: VirtualService
+metadata:
+  name: details-gateway
+spec:
+  # Allow any domains to access
+  hosts:
+  - "*"
+  gateways:
+  - details-gateway
+  http:
+  - match:
+    - uri:
+        prefix: /details
+    - uri:
+        exact: /health
+    route:
+    - destination:
+        host: details
+        port:
+          number: 9080
