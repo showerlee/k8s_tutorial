@@ -136,3 +136,61 @@ Details: https://istio.io/latest/docs/setup/getting-started/
     # Check health output
     curl --header "host: details.example.com" localhost/health
     ```
+
+8. Registry `httpbin` as internal serice in Mesh via ServiceEntry
+    - Add sleep service to act as curl
+        ```
+        kubectl apply -f istio-1.10.3/samples/sleep/sleep.yaml
+        ```
+    
+    - Visit external `httpbin.org` site to test if it is accessable
+        ```
+        kubectl exec -it sleep-557747455f-lktr5 -c sleep curl http://httpbin.org/headers
+        {
+            "headers": {
+                "Accept": "*/*",
+                "Host": "httpbin.org",
+                "User-Agent": "curl/7.78.0-DEV",
+                "X-Amzn-Trace-Id": "Root=1-611fb2b9-0c35890f1f2b65c1051eff72",
+                "X-B3-Sampled": "0",
+                "X-B3-Spanid": "56749a32650e0108",
+                "X-B3-Traceid": "1ec3b070b77a3ecf56749a32650e0108",
+                "X-Envoy-Attempt-Count": "1",
+                "X-Envoy-Peer-Metadata": "ChkKDkFQUF9DT05UQUlORVJTEgcaBXNsZWVwChoKCkNMVVNURVJfSUQSDBoKS3ViZXJuZXRlcwoZCg1JU1RJT19WRVJTSU9OEggaBjEuMTAuMwrfAQoGTEFCRUxTEtQBKtEBCg4KA2FwcBIHGgVzbGVlcAoZCgxpc3Rpby5pby9yZXYSCRoHZGVmYXVsdAohChFwb2QtdGVtcGxhdGUtaGFzaBIMGgo1NTc3NDc0NTVmCiQKGXNlY3VyaXR5LmlzdGlvLmlvL3Rsc01vZGUSBxoFaXN0aW8KKgofc2VydmljZS5pc3Rpby5pby9jYW5vbmljYWwtbmFtZRIHGgVzbGVlcAovCiNzZXJ2aWNlLmlzdGlvLmlvL2Nhbm9uaWNhbC1yZXZpc2lvbhIIGgZsYXRlc3QKGgoHTUVTSF9JRBIPGg1jbHVzdGVyLmxvY2FsCiAKBE5BTUUSGBoWc2xlZXAtNTU3NzQ3NDU1Zi1sa3RyNQoWCglOQU1FU1BBQ0USCRoHZGVmYXVsdApJCgVPV05FUhJAGj5rdWJlcm5ldGVzOi8vYXBpcy9hcHBzL3YxL25hbWVzcGFjZXMvZGVmYXVsdC9kZXBsb3ltZW50cy9zbGVlcAoXChFQTEFURk9STV9NRVRBREFUQRICKgAKGAoNV09SS0xPQURfTkFNRRIHGgVzbGVlcA==",
+                "X-Envoy-Peer-Metadata-Id": "sidecar~10.1.0.94~sleep-557747455f-lktr5.default~default.svc.cluster.local"
+            }
+        }
+        ```
+
+    - Disable `ALLOW_ANY` access in outbound Traffic (outboundTrafficPolicy=REGISTRY_ONLY)
+        ```
+        istioctl manifest generate --set meshConfig.outboundTrafficPolicy.mode=REGISTRY_ONLY > ./generated-manifest.yaml
+        kubectl apply -f ./generated-manifest.yaml
+        ```
+    - Check the accessiability again
+        ```
+        kubectl exec -it sleep-557747455f-lktr5 -c sleep curl http://httpbin.org/headers
+        # No more output refers the global traffic setting blocks all outbound access.
+        ```
+    - Create `ServiceEntry` to allow the outbound traffic for `httpbin.org`
+        ```
+        kubectl apply -f istio-1.10.3/samples/bookinfo/networking/service-entry-httpbin.yaml
+        ```
+    - Check whether the accessiability is back.
+        ```
+        kubectl exec -it sleep-557747455f-lktr5 -c sleep curl http://httpbin.org/headers
+        {
+            "headers": {
+                "Accept": "*/*",
+                "Host": "httpbin.org",
+                "User-Agent": "curl/7.78.0-DEV",
+                "X-Amzn-Trace-Id": "Root=1-611fb2b9-0c35890f1f2b65c1051eff72",
+                "X-B3-Sampled": "0",
+                "X-B3-Spanid": "56749a32650e0108",
+                "X-B3-Traceid": "1ec3b070b77a3ecf56749a32650e0108",
+                "X-Envoy-Attempt-Count": "1",
+                "X-Envoy-Peer-Metadata": "ChkKDkFQUF9DT05UQUlORVJTEgcaBXNsZWVwChoKCkNMVVNURVJfSUQSDBoKS3ViZXJuZXRlcwoZCg1JU1RJT19WRVJTSU9OEggaBjEuMTAuMwrfAQoGTEFCRUxTEtQBKtEBCg4KA2FwcBIHGgVzbGVlcAoZCgxpc3Rpby5pby9yZXYSCRoHZGVmYXVsdAohChFwb2QtdGVtcGxhdGUtaGFzaBIMGgo1NTc3NDc0NTVmCiQKGXNlY3VyaXR5LmlzdGlvLmlvL3Rsc01vZGUSBxoFaXN0aW8KKgofc2VydmljZS5pc3Rpby5pby9jYW5vbmljYWwtbmFtZRIHGgVzbGVlcAovCiNzZXJ2aWNlLmlzdGlvLmlvL2Nhbm9uaWNhbC1yZXZpc2lvbhIIGgZsYXRlc3QKGgoHTUVTSF9JRBIPGg1jbHVzdGVyLmxvY2FsCiAKBE5BTUUSGBoWc2xlZXAtNTU3NzQ3NDU1Zi1sa3RyNQoWCglOQU1FU1BBQ0USCRoHZGVmYXVsdApJCgVPV05FUhJAGj5rdWJlcm5ldGVzOi8vYXBpcy9hcHBzL3YxL25hbWVzcGFjZXMvZGVmYXVsdC9kZXBsb3ltZW50cy9zbGVlcAoXChFQTEFURk9STV9NRVRBREFUQRICKgAKGAoNV09SS0xPQURfTkFNRRIHGgVzbGVlcA==",
+                "X-Envoy-Peer-Metadata-Id": "sidecar~10.1.0.94~sleep-557747455f-lktr5.default~default.svc.cluster.local"
+            }
+        }
+        ```

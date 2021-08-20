@@ -7066,6 +7066,8 @@ data:
         zipkin:
           address: zipkin.istio-system:9411
     enablePrometheusMerge: true
+    outboundTrafficPolicy:
+      mode: REGISTRY_ONLY
     rootNamespace: istio-system
     trustDomain: cluster.local
 ---
