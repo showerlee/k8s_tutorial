@@ -212,4 +212,37 @@ Details: https://istio.io/latest/docs/setup/getting-started/
     kubectl apply -f istio-1.10.3/samples/httpbin/httpbin-gateway.yaml
     # Test interface /status
     curl -I -H host:httpbin.example.com http://localhost/status/200
+    # Test interface /delay
+    curl -I -H host:httpbin.example.com http://localhost/delay/5
+    ```
+
+11. Registry `httpbin` as internal serice in Mesh via `egress`
+
+    ![egress](./docs/egress.png)
+    ```
+    # Check wheather egress exists
+    kubectl get pods -n istio-system |grep egress
+    istio-egressgateway-5547fcc8fc-24ckx    1/1     Running   0          104m
+
+    # Apply serviceEntry for egress
+    kubectl apply -f istio-1.10.3/samples/bookinfo/networking/service-entry-httpbin-egress.yaml
+
+    # Get ip from outside httpbin
+    kubectl exec -it sleep-557747455f-l8jwc -c sleep curl http://httpbin.org/ip
+    # No more outcome
+
+    # Config egressgateway and virtualservice
+    kubectl apply -f istio-1.10.3/samples/bookinfo/networking/egress-gateway.yaml
+
+    # Deploy DestinationRule
+    kubectl apply -f istio-1.10.3/samples/bookinfo/networking/destination-rule-egress.yaml
+
+    # Check egressgateway log
+    kubectl logs -n istio-system istio-egressgateway-5547fcc8fc-24ckx -f
+
+    # Use `sleep` to curl
+    kubectl exec -it sleep-557747455f-l8jwc -c sleep curl http://httpbin.org/ip
+    {
+    "origin": "x.x.x.x, x.x.x.x"
+    }
     ```
