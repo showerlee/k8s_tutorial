@@ -200,6 +200,6 @@ Details: https://istio.io/latest/docs/setup/getting-started/
     kubectl apply -f istio-1.10.3/samples/bookinfo/networking/virtual-service-reviews-50-v3.yaml
     ```
     ```
-    # route to v2 version if browser is Chrome
+    # Route to v2 version if browser is Chrome
     kubectl apply -f istio-1.10.3/samples/bookinfo/networking/virtual-service-reviews-50-v2-chrome.yaml
     ```
