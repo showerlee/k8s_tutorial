@@ -203,3 +203,13 @@ Details: https://istio.io/latest/docs/setup/getting-started/
     # Route to v2 version if browser is Chrome
     kubectl apply -f istio-1.10.3/samples/bookinfo/networking/virtual-service-reviews-50-v2-chrome.yaml
     ```
+
+10. Setup ingress for `httpbin`
+    ```
+    # Deploy httpbin
+    kubectl apply -f istio-1.10.3/samples/httpbin/httpbin.yaml
+    # Deploy Gateway for httpbin
+    kubectl apply -f istio-1.10.3/samples/httpbin/httpbin-gateway.yaml
+    # Test interface /status
+    curl -I -H host:httpbin.example.com http://localhost/status/200
+    ```
