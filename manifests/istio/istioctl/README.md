@@ -164,7 +164,7 @@ Details: https://istio.io/latest/docs/setup/getting-started/
 
     - Disable `ALLOW_ANY` access in outbound Traffic (outboundTrafficPolicy=REGISTRY_ONLY)
         ```
-        istioctl manifest generate --set meshConfig.outboundTrafficPolicy.mode=REGISTRY_ONLY > ./generated-manifest.yaml
+        istioctl manifest generate --set meshConfig.outboundTrafficPolicy.mode=REGISTRY_ONLY meshConfig.accessLogFile=/dev/stdout > ./generated-manifest.yaml
         kubectl apply -f ./generated-manifest.yaml
         ```
     - Check the accessiability again
