@@ -246,3 +246,27 @@ Details: https://istio.io/latest/docs/setup/getting-started/
     "origin": "x.x.x.x, x.x.x.x"
     }
     ```
+
+12. Timeout retry: improve the robustness and availability of the system
+
+    ![retry-timeout](./docs/retry-timeout.png)
+
+    ```
+    # Route review to v2 version
+    kubectl apply -f istio-1.10.3/samples/bookinfo/networking/virtual-service-reviews-v2.yaml
+
+    # Ratings retry(2s latency)
+    kubectl apply -f istio-1.10.3/samples/bookinfo/networking/virtual-service-ratings-retry.yaml
+
+    # Visit productpage where ratings has 2s latency and 2 attempts
+    curl http://localhost/productpage
+
+    # Review 1s timeout
+    kubectl apply -f istio-1.10.3/samples/bookinfo/networking/virtual-service-review-timeout.yaml
+
+    # Visit productpage where review has 1s timeout, but since ratings has 2s latency, it would have internal unavailability.
+    curl http://localhost/productpage
+
+    # Check if any logs print ratings performs 2 attempts
+    kubectl logs -f ratings-v1-b6994bb9-l4j29 -c istio-proxy
+    ```
