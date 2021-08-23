@@ -270,3 +270,45 @@ Details: https://istio.io/latest/docs/setup/getting-started/
     # Check if any logs print ratings performs 2 attempts
     kubectl logs -f ratings-v1-b6994bb9-l4j29 -c istio-proxy
     ```
+
+13. Circuit breaking for `httpbin`
+
+    ![circuit-breaking](./docs/circuit-breaking.png)
+
+    ```
+    # Deploy `httpbin`
+    kubectl apply -f istio-1.10.3/samples/httpbin/httpbin.yaml
+
+    # Add curcuit breaking for `httpbin`
+    kubectl apply -f istio-1.10.3/samples/bookinfo/networking/destination-rule-circuitbreaking.yaml
+
+    # Deploy test tool `fortio` for concurrency and retries.
+    kubectl apply -f istio-1.10.3/samples/httpbin/sample-client/fortio-deploy.yaml
+
+    # Run test via `fortio`
+    FORTIO_POD=$(kubectl get pod | grep fortio | awk '{print $1}')
+    kubectl exec -it "$FORTIO_POD" -c fortio -- /usr/bin/fortio load -curl http://httpbin:8000/get
+
+    # Request 2 concurrencies and 20 times
+    kubectl exec -it "$FORTIO_POD" -c fortio -- /usr/bin/fortio load -c 2 -qps 0 -n 20 -loglevel Warning http://httpbin:8000/get
+    ...
+    # Success request = 16 and failed request = 4 refers to block by curcuit breaking.
+    Code 200 : 16 (80.0 %)
+    Code 503 : 4 (20.0 %)
+    ...
+
+    # Request 3 concurrencies and 30 times
+    kubectl exec -it "$FORTIO_POD" -c fortio -- /usr/bin/fortio load -c 3 -qps 0 -n 30 -loglevel Warning http://httpbin:8000/get
+    ...
+    # Success request = 15 and failed request = 15 refers to block by curcuit breaking.
+    Code 200 : 15 (50.0 %)
+    Code 503 : 15 (50.0 %)
+    ...
+
+    # Check overflow(curcuit breaking) times
+    kubectl exec $FORTIO_POD -c istio-proxy -- pilot-agent request GET stats | grep httpbin.default | grep pending
+    ...
+    cluster.outbound|8000||httpbin.default.svc.cluster.local.upstream_rq_pending_overflow: 19
+    ...
+
+    ```
