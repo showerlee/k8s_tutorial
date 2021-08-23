@@ -312,3 +312,29 @@ Details: https://istio.io/latest/docs/setup/getting-started/
     ...
 
     ```
+
+14. Add a latency issue for ratings to simulate `Chaos engineering`
+
+    ![latency-chaos](./docs/latency-chaos.png)
+
+    Chaos engineering is to deliberately destroy the system to improve the system's reliability to respond to failures
+
+    Istio has `fault` in `VirtualService` to simulate Chaos engineering.
+
+    Fault has `delay` and `abort` feature to simulate failure.
+    - Delay: Add service abnormal latency
+    - Abort: Add service `404` `500` status code
+
+    ```
+    # Revert all virtual service to v1
+    kubectl apply -f istio-1.10.3/samples/bookinfo/networking/virtual-service-all-v1.yaml
+
+    # Route review virtual service to v2 when login as `jason`, otherwise route to v1
+    kubectl apply -f istio-1.10.3/samples/bookinfo/networking/virtual-service-reviews-test-v2.yaml
+
+    # Add rating latency delay when login as `jason`
+    kubectl apply -f istio-1.10.3/samples/bookinfo/networking/virtual-service-ratings-test-delay.yaml
+
+    # Visit `localhost/productpage` which reflects review section has unavailability issue if latency has 7s delay when login as `jason`, signout would recover.
+
+    ```
