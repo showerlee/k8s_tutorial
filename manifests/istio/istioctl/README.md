@@ -338,3 +338,37 @@ Details: https://istio.io/latest/docs/setup/getting-started/
     # Visit `localhost/productpage` which reflects review section has unavailability issue if latency has 7s delay when login as `jason`, signout would recover.
 
     ```
+
+15. Traffic mirroring
+
+    ```
+    # Deploy httpbin-v1
+    kubectl apply -f istio-1.10.3/samples/traffic-mirroring/httpbin-v1.yaml
+
+    # Deploy httpbin-v2
+    kubectl apply -f istio-1.10.3/samples/traffic-mirroring/httpbin-v2.yaml
+
+    # Deploy httpbin service
+    kubectl apply -f istio-1.10.3/samples/traffic-mirroring/svc.yaml
+
+    # Setup route rule for v1
+    kubectl apply -f istio-1.10.3/samples/traffic-mirroring/vs.yaml
+
+    # Call httpbin /header api
+    export SLEEP_POD=$(kubectl get pods -l app=sleep -o jsonpath={.items..metadata.name})
+    kubectl exec -it $SLEEP_POD -c sleep -- sh -c 'curl http://httpbin:8000/headers'
+
+    # Mirror traffic from v1 to v2
+    kubectl apply -f istio-1.10.3/samples/traffic-mirroring/mirror.yaml
+
+    # Re-call httpbin /header api and check if logs exist both in v1 and v2
+    kubectl logs -f httpbin-v1-774fb8b7d9-h8lxz -c httpbin
+    ...
+    127.0.0.6 - - [26/Aug/2021:14:21:14 +0000] "GET /headers HTTP/1.1" 200 527 "-" "curl/7.78.0-DEV"
+    ...
+
+    kubectl logs -f httpbin-v2-774dwagr29-h73cz -c httpbin
+    ...
+    127.0.0.6 - - [26/Aug/2021:14:21:14 +0000] "GET /headers HTTP/1.1" 200 567 "-" "curl/7.78.0-DEV"
+    ...
+    ```
