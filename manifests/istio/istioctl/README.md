@@ -376,3 +376,13 @@ Details: https://istio.io/latest/docs/setup/getting-started/
     127.0.0.6 - - [26/Aug/2021:14:21:14 +0000] "GET /headers HTTP/1.1" 200 567 "-" "curl/7.78.0-DEV"
     ...
     ```
+
+16. Kiali
+    ![kiali-frame.png](./docs/kiali-frame.png)
+    ![kiali-feature.png](./docs/kiali-feature.png)
+
+    - How to use
+
+    ```
+    istioctl dashboard kiali
+    ```
