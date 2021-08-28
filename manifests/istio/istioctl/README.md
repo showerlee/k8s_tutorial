@@ -378,6 +378,7 @@ Details: https://istio.io/latest/docs/setup/getting-started/
     ```
 
 16. Kiali
+
     ![kiali-frame.png](./docs/kiali-frame.png)
     ![kiali-feature.png](./docs/kiali-feature.png)
 
@@ -385,4 +386,22 @@ Details: https://istio.io/latest/docs/setup/getting-started/
 
     ```
     istioctl dashboard kiali
+    ```
+
+17. Prometheus
+
+    ![prometheus.png](./docs/prometheus.png)
+
+    - How to use
+
+    ```
+    istioctl dashboard prometheus
+    ```
+
+18. Grafana
+
+    - How to use
+
+    ```
+    istioctl dashboard grafana
     ```
