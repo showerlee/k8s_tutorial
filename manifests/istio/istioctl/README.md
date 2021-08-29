@@ -168,7 +168,7 @@ Details: https://istio.io/latest/docs/setup/getting-started/
 
     - Disable `ALLOW_ANY` access in outbound Traffic (outboundTrafficPolicy=REGISTRY_ONLY)
         ```
-        istioctl manifest generate --set meshConfig.outboundTrafficPolicy.mode=REGISTRY_ONLY meshConfig.accessLogFile=/dev/stdout > ./generated-manifest.yaml
+        istioctl manifest generate --set meshConfig.outboundTrafficPolicy.mode=REGISTRY_ONLY --set meshConfig.accessLogFile=/dev/stdout --set meshConfig.accessLogEncoding=JSON > ./generated-manifest.yaml
         kubectl apply -f ./generated-manifest.yaml
         ```
     - Check the accessiability again
@@ -405,3 +405,18 @@ Details: https://istio.io/latest/docs/setup/getting-started/
     ```
     istioctl dashboard grafana
     ```
+
+19. Envoy(istio-proxy) logging
+
+    ![logging.png](./docs/logging.png)
+
+    ```
+    # Check if logging is enable
+    kubectl describe configmaps -n istio-system istio | grep accessLogFile
+    accessLogFile: /dev/stdout
+
+    # Check productpage logs
+    kubectl logs -f productpage-v1-846bd994fb-vk4rw istio-proxy
+    {"requested_server_name":null,"path":"/reviews/0","user_agent":"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/92.0.4515.131 Safari/537.36","downstream_local_address":"10.110.231.110:9080","start_time":"2021-08-29T10:19:39.660Z","protocol":"HTTP/1.1","upstream_service_time":"8","duration":8,"request_id":"6f867212-d7cf-4c68-9468-6fbc5f927335","x_forwarded_for":null,"response_flags":"-","bytes_received":0,"upstream_local_address":"10.1.0.223:34460","bytes_sent":295,"authority":"reviews:9080","connection_termination_details":null,"downstream_remote_address":"10.1.0.223:42980","upstream_host":"10.1.0.227:9080","response_code_details":"via_upstream","upstream_transport_failure_reason":null,"method":"GET","route_name":"default","upstream_cluster":"outbound|9080||reviews.default.svc.cluster.local","response_code":200}
+    ```
+
