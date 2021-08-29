@@ -431,3 +431,44 @@ Details: https://istio.io/latest/docs/setup/getting-started/
     ```
     istioctl dashboard jaeger
     ```
+
+21. Secure discovery service(SDS)
+
+    ![sds.png](./docs/sds.png)
+
+    ```
+    0.Check if `curl` is compiled via `LibreSSL`
+    curl --version | grep "LibreSSL"
+    curl 7.64.1 (x86_64-apple-darwin20.0) libcurl/7.64.1 (SecureTransport) LibreSSL/2.8.3 zlib/1.2.11 nghttp2/1.41.0
+
+    1.Create a root certificate and private key for the service
+    cd istio-1.10.3/samples/certs/
+    openssl req -x509 -sha256 -nodes -days 365 -newkey rsa:2048 -subj '/O=example Inc./CN=example.com' -keyout example.com.key -out example.com.crt
+
+    2.Create a certificate and private key for httpbin.example.com
+    openssl req -out httpbin.example.com.csr -newkey rsa:2048 -nodes -keyout httpbin.example.com.key -subj "/CN=httpbin.example.com/O=httpbin organization"
+    openssl x509 -req -days 365 -CA example.com.crt -CAkey example.com.key -set_serial 0 -in httpbin.example.com.csr -out httpbin.example.com.crt
+
+    3. Create secret
+    kubectl create -n istio-system secret tls httpbin-credential --key=httpbin.example.com.key --cert=httpbin.example.com.crt
+
+    4.Define gateway and VirtualService
+    cd ../../../
+    kubectl apply -f istio-1.10.3/samples/certs/gateway.yaml
+    kubectl apply -f istio-1.10.3/samples/certs/httpbin.yaml
+
+    5. Request verification
+    curl -iv -HHost:httpbin.example.com \
+    --resolve httpbin.example.com:443:127.0.0.1 \
+    --cacert istio-1.10.3/samples/certs/example.com.crt "https://httpbin.example.com:443/status/418"
+    ...
+    -=[ teapot ]=-
+
+       _...._
+     .'  _ _ `.
+    | ."` ^ `". _,
+    \_;`"---"`|//
+      |       ;/
+      \_     _/
+        `"""`
+    ```
