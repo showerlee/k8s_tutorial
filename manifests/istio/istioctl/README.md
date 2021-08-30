@@ -472,3 +472,48 @@ Details: https://istio.io/latest/docs/setup/getting-started/
       \_     _/
         `"""`
     ```
+
+22. MTLS
+
+    ![mtls.png](./docs/mtls.png)
+
+    ```
+    # Create testaut namespace
+    kubectl create ns testauth
+
+    # Create sleep pod as client
+    kubectl apply -f istio-1.10.3/samples/sleep/sleep.yaml -n testauth
+
+    # curl httpbin via sleep without tls
+    kubectl exec -it sleep-557747455f-n5nn5 -n testauth -c sleep -- curl http://httpbin.default:8000/ip
+    {
+    "origin": "127.0.0.6"
+    }
+
+    # Compatible mode deploy
+    kubectl apply -f istio-1.10.3/samples/httpbin/peer-auth.yaml
+
+    # curl httpbin via sleep with tls
+    kubectl exec -it sleep-557747455f-n5nn5 -n testauth -c sleep -- curl http://httpbin.default:8000/ip
+
+    {
+    "origin": "127.0.0.6"
+    }
+
+    # Strict mode deploy
+    kubectl apply -f istio-1.10.3/samples/httpbin/peer-auth-strict.yaml
+
+    # Request failed while deploy strict mode
+    kubectl exec -it sleep-557747455f-n5nn5 -n testauth -c sleep -- curl http://httpbin.default:8000/ip
+    curl: (56) Recv failure: Connection reset by peer
+    command terminated with exit code 56
+
+    # Inject mtls for unblocking the strict mode
+    kubectl apply -f <(istioctl kube-inject -f istio-1.10.3/samples/sleep/sleep.yaml) -n testauth
+
+    # Check the result
+    kubectl exec -it sleep-7cd5b59b89-fpfpx -n testauth -c sleep -- curl http://httpbin.default:8000/ip
+    {
+     "origin": "127.0.0.6"
+    }
+    ```
