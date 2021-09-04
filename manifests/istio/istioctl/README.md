@@ -517,3 +517,38 @@ Details: https://istio.io/latest/docs/setup/getting-started/
      "origin": "127.0.0.6"
     }
     ```
+
+23. JWT authentication and authorization
+
+    ```
+    # Create namespace for jwt
+    kubectl create ns testjwt
+
+    # Authenticate mtls server and client
+    kubectl apply -f <(istioctl kube-inject -f istio-1.10.3/samples/sleep/sleep.yaml) -n testjwt
+    kubectl apply -f <(istioctl kube-inject -f istio-1.10.3/samples/httpbin/httpbin.yaml) -n testjwt
+
+    # Test c/s connection
+    kubectl exec $(kubectl get pod -l app=sleep -n testjwt -o jsonpath={.items..metadata.name}) -c sleep -n testjwt -- curl "http://httpbin.testjwt:8000/headers" -s -o /dev/null -w "%{http_code}"
+
+    # Set JWT for server
+    kubectl apply -f istio-1.10.3/samples/httpbin/httpbin-jwt.yaml
+
+    # Set authorization policy for server
+    kubectl apply -f istio-1.10.3/samples/httpbin/httpbin-jwt-auth.yaml
+
+    # Check server connect via invalid and null token
+    kubectl exec $(kubectl get pod -l app=sleep -n testjwt -o jsonpath={.items..metadata.name}) -c sleep -n testjwt -- curl "http://httpbin.testjwt:8000/headers" -H "Authorization: Bearer invalidToken" -s -o /dev/null -w "%{http_code}"
+    401%
+
+    kubectl exec $(kubectl get pod -l app=sleep -n testjwt -o jsonpath={.items..metadata.name}) -c sleep -n testjwt -- curl "http://httpbin.testjwt:8000/headers" -s -o /dev/null -w "%{http_code}"
+    403%
+
+    # Decode jwt
+    TOKEN=$(curl https://raw.githubusercontent.com/malphi/geektime-servicemesh/master/c3-19/demo.jwt -s) && echo $TOKEN | cut -d '.' -f2 - | base64 --decode -
+
+    # Check server connect via valid token
+    kubectl exec $(kubectl get pod -l app=sleep -n testjwt -o jsonpath={.items..metadata.name}) -c sleep -n testjwt -- curl "http://httpbin.testjwt:8000/headers" -H "Authorization: Bearer $TOKEN" -s -o /dev/null -w "%{http_code}"
+    200%
+
+    ```
