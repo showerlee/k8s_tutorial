@@ -2,7 +2,11 @@
 
 ## Architecture
 
-![k8s framework](./docs/k8s.png)
+- K8s framework
+![k8s framework](./docs/k8s-architecture.png)
+
+- K8s pod life journey
+![k8s pod life journey](./docs/k8s-pod-life-journey.png)
 
 Version: 1.17.2
 
